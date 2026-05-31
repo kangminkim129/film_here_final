@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --background: #121212; /* Cinematic Dark Charcoal */
+  --foreground: #FDFBF7; /* Warm Antique Ivory */
+  --accent: #E5E1D8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-cinematic-dark: #121212;
+  --color-antique-ivory: #FDFBF7;
+  
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mapbox Popup Styling */
+.mapboxgl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: #18181b !important; /* matches zinc-900 */
+}
+
+.custom-popup .mapboxgl-popup-close-button {
+  display: none;
+}

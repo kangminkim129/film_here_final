@@ -1,0 +1,178 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
+import { supabase } from '@/lib/supabase';
+import { ChevronLeft, Bookmark, MapPin, Share2 } from 'lucide-react';
+import Link from 'next/link';
+
+import Image from 'next/image';
+
+interface Spot {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  is_cafe: boolean;
+}
+
+interface SceneWithMovie {
+  id: string;
+  image_url: string;
+  description: string;
+  movies: {
+    id: string;
+    title: string;
+  };
+}
+
+export default function SpotDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [spot, setSpot] = useState<Spot | null>(null);
+  const [scenes, setScenes] = useState<SceneWithMovie[]>([]);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSpotData() {
+      setLoading(true);
+      
+      // Fetch spot info
+      const { data: spotData } = await supabase
+        .from('spots')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (spotData) setSpot(spotData as Spot);
+
+      // Fetch scenes related to this spot
+      const { data: scenesData } = await supabase
+        .from('scenes')
+        .select(`
+          id,
+          image_url,
+          description,
+          movies (
+            id,
+            title
+          )
+        `)
+        .eq('spot_id', id);
+      
+      if (scenesData) setScenes(scenesData as unknown as SceneWithMovie[]);
+
+      // Check if bookmarked
+      // For now, we'll use a local storage or a dummy user id since Auth is not fully implemented
+      const { data: bookmarkData } = await supabase
+        .from('bookmarks')
+        .select('*')
+        .eq('spot_id', id)
+        .maybeSingle();
+      
+      setIsBookmarked(!!bookmarkData);
+      
+      setLoading(false);
+    }
+    fetchSpotData();
+  }, [id]);
+
+  const toggleBookmark = async () => {
+    if (isBookmarked) {
+      await supabase.from('bookmarks').delete().eq('spot_id', id);
+      setIsBookmarked(false);
+    } else {
+      await supabase.from('bookmarks').insert({ spot_id: id });
+      setIsBookmarked(true);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-pulse text-antique-ivory/50">장소 정보 불러오는 중...</div>
+    </div>
+  );
+
+  if (!spot) return <div className="min-h-screen bg-background text-antique-ivory p-20 text-center">장소를 찾을 수 없습니다.</div>;
+
+  return (
+    <main className="min-h-screen bg-background text-antique-ivory">
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-6 bg-gradient-to-b from-background to-transparent">
+        <button onClick={() => window.history.back()} className="p-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-black/60 transition-all">
+          <ChevronLeft size={24} />
+        </button>
+        <div className="flex gap-3">
+          <button className="p-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-black/60 transition-all">
+            <Share2 size={24} />
+          </button>
+          <button 
+            onClick={toggleBookmark}
+            className={`p-2 backdrop-blur-md rounded-full border border-white/10 transition-all ${isBookmarked ? 'bg-antique-ivory text-black' : 'bg-black/40 text-antique-ivory hover:bg-black/60'}`}
+          >
+            <Bookmark size={24} fill={isBookmarked ? "currentColor" : "none"} />
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto pt-24 px-6 pb-20 space-y-12">
+        {/* Spot Info */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-antique-ivory/60">
+            <MapPin size={18} />
+            <span className="text-sm tracking-wide uppercase font-medium">{spot.is_cafe ? '감성 카페' : '영화 촬영지'}</span>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+            {spot.name}
+          </h1>
+          <p className="text-xl text-antique-ivory/40">
+            {spot.address}
+          </p>
+        </div>
+
+        {/* Cinematic Scenes */}
+        <div className="space-y-8">
+          <h2 className="text-2xl font-medium border-b border-white/10 pb-4">미디어 속 명장면</h2>
+          <div className="grid gap-12">
+            {scenes.map((scene) => (
+              <div key={scene.id} className="space-y-6">
+                <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-zinc-800">
+                  {scene.image_url ? (
+                    <Image 
+                      src={scene.image_url} 
+                      alt={scene.description || "Scene"} 
+                      fill 
+                      className="object-cover transition-opacity duration-300"
+                      unoptimized
+                      onLoadingComplete={(img) => img.classList.add('opacity-100')}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-antique-ivory/20 gap-2">
+                      <Share2 size={40} className="opacity-20" />
+                      <span className="text-sm italic">이미지가 등록되지 않았습니다</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Link 
+                    href={`/movie/${scene.movies.id}`}
+                    className="inline-block px-3 py-1 bg-antique-ivory/10 text-antique-ivory text-sm rounded-full border border-antique-ivory/20 hover:bg-antique-ivory hover:text-black transition-all"
+                  >
+                    {scene.movies.title}
+                  </Link>
+                  <p className="text-2xl font-light leading-relaxed">
+                    &ldquo;{scene.description}&rdquo;
+                  </p>
+                </div>
+              </div>
+            ))}
+            {scenes.length === 0 && (
+              <div className="text-center py-10 text-antique-ivory/30 italic">이 장소가 등장한 작품 정보가 등록되지 않았습니다.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
