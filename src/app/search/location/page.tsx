@@ -10,6 +10,11 @@ interface Spot {
   name: string;
   address: string;
   is_cafe: boolean;
+  scenes?: {
+    movies: {
+      title: string;
+    }
+  }[];
 }
 
 export default function LocationSearchPage() {
@@ -20,17 +25,35 @@ export default function LocationSearchPage() {
   useEffect(() => {
     async function fetchAllSpots() {
       setLoading(true);
-      const { data, error } = await supabase.from('spots').select('id, name, address, is_cafe').order('name');
-      if (!error) setSpots(data || []);
+      const { data, error } = await supabase
+        .from('spots')
+        .select(`
+          id, 
+          name, 
+          address, 
+          is_cafe,
+          scenes (
+            movies (
+              title
+            )
+          )
+        `)
+        .order('name');
+      
+      if (!error) setSpots(data as unknown as Spot[] || []);
       setLoading(false);
     }
     fetchAllSpots();
   }, []);
 
-  const filteredSpots = spots.filter(spot => 
-    spot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (spot.address && spot.address.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredSpots = spots.filter(spot => {
+    const movieTitles = spot.scenes?.map(s => s.movies?.title).filter(Boolean).join(' ') || '';
+    return (
+      spot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (spot.address && spot.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      movieTitles.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
     <main className="min-h-screen bg-background p-6 md:p-12">
@@ -48,7 +71,7 @@ export default function LocationSearchPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-antique-ivory/40" size={24} />
           <input
             type="text"
-            placeholder="동네, 건물명, 장소 이름을 입력하세요..."
+            placeholder="동네, 건물명, 작품 제목을 입력하세요..."
             className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-xl text-antique-ivory focus:outline-none focus:border-antique-ivory/50 transition-colors"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -61,26 +84,38 @@ export default function LocationSearchPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredSpots.map(spot => (
-              <Link
-                key={spot.id}
-                href={`/spot/${spot.id}`}
-                className="group flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-antique-ivory/30 transition-all hover:bg-white/10"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${spot.is_cafe ? 'bg-amber-400/10 text-amber-400' : 'bg-antique-ivory/10 text-antique-ivory'}`}>
-                    <MapPin size={24} />
+            {filteredSpots.map(spot => {
+              // Extract unique movie titles
+              const uniqueMovies = Array.from(new Set(spot.scenes?.map(s => s.movies?.title))).filter(Boolean);
+              
+              return (
+                <Link
+                  key={spot.id}
+                  href={`/spot/${spot.id}`}
+                  className="group flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-antique-ivory/30 transition-all hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-full ${spot.is_cafe ? 'bg-amber-400/10 text-amber-400' : 'bg-antique-ivory/10 text-antique-ivory'}`}>
+                      <MapPin size={24} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-medium text-antique-ivory">{spot.name}</h3>
+                        {uniqueMovies.length > 0 && (
+                          <span className="text-[10px] px-2 py-0.5 bg-antique-ivory/10 text-antique-ivory/60 rounded-full border border-antique-ivory/20">
+                            {uniqueMovies[0]} {uniqueMovies.length > 1 && `외 ${uniqueMovies.length - 1}`}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-antique-ivory/40">{spot.address}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-medium text-antique-ivory">{spot.name}</h3>
-                    <p className="text-antique-ivory/40">{spot.address}</p>
+                  <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-sm text-antique-ivory/60">상세 정보 보기 &rarr;</span>
                   </div>
-                </div>
-                <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-sm text-antique-ivory/60">상세 정보 보기 &rarr;</span>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
 

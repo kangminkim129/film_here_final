@@ -36,43 +36,55 @@ export default function SpotDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     async function fetchSpotData() {
       setLoading(true);
-      
-      // Fetch spot info
-      const { data: spotData } = await supabase
-        .from('spots')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (spotData) setSpot(spotData as Spot);
+      try {
+        // Fetch spot info
+        const { data: spotData, error: spotError } = await supabase
+          .from('spots')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (spotError) {
+          console.error('Error fetching spot:', spotError);
+        } else if (spotData) {
+          setSpot(spotData as Spot);
+        }
 
-      // Fetch scenes related to this spot
-      const { data: scenesData } = await supabase
-        .from('scenes')
-        .select(`
-          id,
-          image_url,
-          description,
-          movies (
+        // Fetch scenes related to this spot
+        const { data: scenesData, error: scenesError } = await supabase
+          .from('scenes')
+          .select(`
             id,
-            title
-          )
-        `)
-        .eq('spot_id', id);
-      
-      if (scenesData) setScenes(scenesData as unknown as SceneWithMovie[]);
+            image_url,
+            description,
+            movies (
+              id,
+              title
+            )
+          `)
+          .eq('spot_id', id);
+        
+        if (scenesError) {
+          console.error('Error fetching scenes:', scenesError);
+        } else if (scenesData) {
+          // Supabase might return movies as an array or object depending on configuration
+          // Standard join returns an object for single FK
+          setScenes(scenesData as unknown as SceneWithMovie[]);
+        }
 
-      // Check if bookmarked
-      // For now, we'll use a local storage or a dummy user id since Auth is not fully implemented
-      const { data: bookmarkData } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .eq('spot_id', id)
-        .maybeSingle();
-      
-      setIsBookmarked(!!bookmarkData);
-      
-      setLoading(false);
+        // Check if bookmarked
+        const { data: bookmarkData } = await supabase
+          .from('bookmarks')
+          .select('*')
+          .eq('spot_id', id)
+          .maybeSingle();
+        
+        setIsBookmarked(!!bookmarkData);
+      } catch (err) {
+        console.error('Unexpected error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchSpotData();
   }, [id]);
