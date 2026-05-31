@@ -35,24 +35,39 @@ export default function MapComponent() {
   useEffect(() => {
     async function fetchSpots() {
       console.log('Fetching spots with scenes and movies...');
-      const { data, error } = await supabase
-        .from('spots')
-        .select(`
-          *,
-          scenes (
-            image_url,
-            description,
-            movies (
-              title
+      try {
+        const { data, error } = await supabase
+          .from('spots')
+          .select(`
+            *,
+            scenes (
+              image_url,
+              description,
+              movies (
+                title
+              )
             )
-          )
-        `);
-      
-      if (error) {
-        console.error('Error fetching spots:', error);
-      } else {
-        console.log('Fetched spots:', data);
-        setSpots(data as unknown as Spot[] || []);
+          `);
+        
+        if (error) {
+          console.error('Error fetching spots with join:', error);
+          // Fallback to simple spots fetch
+          const { data: simpleData, error: simpleError } = await supabase
+            .from('spots')
+            .select('*');
+          
+          if (simpleError) {
+            console.error('Error fetching simple spots:', simpleError);
+          } else {
+            console.log('Fetched simple spots (fallback):', simpleData);
+            setSpots(simpleData as Spot[] || []);
+          }
+        } else {
+          console.log('Fetched spots with scenes:', data);
+          setSpots(data as unknown as Spot[] || []);
+        }
+      } catch (err) {
+        console.error('Unexpected error in fetchSpots:', err);
       }
     }
     fetchSpots();
