@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, Bookmark, MapPin, Share2, Compass } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import Image from 'next/image';
 
@@ -28,16 +29,26 @@ interface SceneWithMovie {
 
 export default function SpotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  
   const [spot, setSpot] = useState<Spot | null>(null);
   const [scenes, setScenes] = useState<SceneWithMovie[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     async function fetchSpotData() {
       setLoading(true);
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        let currentUser = null;
+        if (session) {
+          setUser(session.user);
+          currentUser = session.user;
+        }
+
         // Fetch spot info
         const { data: spotData, error: spotError } = await supabase
           .from('spots')
@@ -71,14 +82,17 @@ export default function SpotDetailPage({ params }: { params: Promise<{ id: strin
           setScenes(scenesData as unknown as SceneWithMovie[]);
         }
 
-        // Check if bookmarked
-        const { data: bookmarkData } = await supabase
-          .from('bookmarks')
-          .select('*')
-          .eq('spot_id', id)
-          .maybeSingle();
-        
-        setIsBookmarked(!!bookmarkData);
+        // Check if bookmarked (personal to user)
+        if (currentUser) {
+          const { data: bookmarkData } = await supabase
+            .from('bookmarks')
+            .select('*')
+            .eq('spot_id', id)
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+          
+          setIsBookmarked(!!bookmarkData);
+        }
       } catch (err) {
         console.error('Unexpected error:', err);
       } finally {
@@ -89,11 +103,27 @@ export default function SpotDetailPage({ params }: { params: Promise<{ id: strin
   }, [id]);
 
   const toggleBookmark = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert('로그인이 필요한 기능입니다. 로그인 페이지로 이동합니다.');
+      router.push('/login');
+      return;
+    }
+
     if (isBookmarked) {
-      await supabase.from('bookmarks').delete().eq('spot_id', id);
+      await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('spot_id', id)
+        .eq('user_id', session.user.id);
       setIsBookmarked(false);
     } else {
-      await supabase.from('bookmarks').insert({ spot_id: id });
+      await supabase
+        .from('bookmarks')
+        .insert({ 
+          spot_id: id,
+          user_id: session.user.id
+        });
       setIsBookmarked(true);
     }
   };

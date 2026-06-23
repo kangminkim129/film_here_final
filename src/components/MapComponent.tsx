@@ -34,6 +34,7 @@ export default function MapComponent() {
 
   const [spots, setSpots] = useState<Spot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [bookmarkedSpotIds, setBookmarkedSpotIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMovieTitle, setFilterMovieTitle] = useState<string | null>(null);
@@ -86,11 +87,36 @@ export default function MapComponent() {
     fetchSpots();
   }, []);
 
-  // 2. Fetch User Bookmarks
+  // 2. Fetch User and Session
+  useEffect(() => {
+    async function getSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+      }
+    }
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 3. Fetch User Bookmarks
   useEffect(() => {
     async function fetchBookmarks() {
+      if (!user) {
+        setBookmarkedSpotIds(new Set());
+        return;
+      }
       try {
-        const { data, error } = await supabase.from('bookmarks').select('spot_id');
+        const { data, error } = await supabase
+          .from('bookmarks')
+          .select('spot_id')
+          .eq('user_id', user.id);
+          
         if (!error && data) {
           setBookmarkedSpotIds(new Set(data.map(b => b.spot_id)));
         }
@@ -99,9 +125,9 @@ export default function MapComponent() {
       }
     }
     fetchBookmarks();
-  }, []);
+  }, [user]);
 
-  // 3. Fetch Movie Title if filtered by movie_id
+  // 4. Fetch Movie Title if filtered by movie_id
   useEffect(() => {
     if (movieIdParam) {
       async function fetchMovieTitle() {
@@ -124,7 +150,7 @@ export default function MapComponent() {
     }
   }, [movieIdParam]);
 
-  // 4. Center map based on spot_id query param
+  // 5. Center map based on spot_id query param
   useEffect(() => {
     if (spots.length > 0 && spotIdParam) {
       const spot = spots.find(s => s.id === spotIdParam);
@@ -139,7 +165,7 @@ export default function MapComponent() {
     }
   }, [spots, spotIdParam]);
 
-  // 5. Center map based on movie spots if movie_id query param matches
+  // 6. Center map based on movie spots if movie_id query param matches
   useEffect(() => {
     if (spots.length > 0 && movieIdParam) {
       // Find the first spot matching the movie
@@ -160,11 +186,23 @@ export default function MapComponent() {
   const toggleBookmark = async (spotId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    if (!user) {
+      alert('로그인이 필요한 기능입니다. 로그인 페이지로 이동합니다.');
+      router.push('/login');
+      return;
+    }
+    
     const isBookmarked = bookmarkedSpotIds.has(spotId);
     
     try {
       if (isBookmarked) {
-        const { error } = await supabase.from('bookmarks').delete().eq('spot_id', spotId);
+        const { error } = await supabase
+          .from('bookmarks')
+          .delete()
+          .eq('spot_id', spotId)
+          .eq('user_id', user.id);
+          
         if (!error) {
           setBookmarkedSpotIds(prev => {
             const next = new Set(prev);
@@ -173,7 +211,13 @@ export default function MapComponent() {
           });
         }
       } else {
-        const { error } = await supabase.from('bookmarks').insert({ spot_id: spotId });
+        const { error } = await supabase
+          .from('bookmarks')
+          .insert({ 
+            spot_id: spotId,
+            user_id: user.id 
+          });
+          
         if (!error) {
           setBookmarkedSpotIds(prev => {
             const next = new Set(prev);

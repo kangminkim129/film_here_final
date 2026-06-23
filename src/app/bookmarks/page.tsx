@@ -18,10 +18,19 @@ interface BookmarkedSpot {
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState<BookmarkedSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     async function fetchBookmarks() {
       setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+      setUser(session.user);
+
       const { data, error } = await supabase
         .from('bookmarks')
         .select(`
@@ -32,13 +41,44 @@ export default function BookmarksPage() {
             address,
             is_cafe
           )
-        `);
+        `)
+        .eq('user_id', session.user.id);
       
       if (!error) setBookmarks(data as unknown as BookmarkedSpot[] || []);
       setLoading(false);
     }
     fetchBookmarks();
   }, []);
+
+  if (!loading && !user) {
+    return (
+      <main className="min-h-screen bg-background p-6 md:p-12 flex flex-col justify-center items-center text-center">
+        <div className="max-w-md w-full space-y-6 bg-zinc-950/40 border border-white/10 rounded-3xl p-8 shadow-2xl backdrop-blur-md">
+          <div className="p-4 bg-antique-ivory/5 rounded-full inline-block border border-white/5">
+            <Bookmark size={32} className="text-antique-ivory/50" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-antique-ivory">로그인이 필요합니다</h2>
+            <p className="text-sm text-antique-ivory/50 font-light leading-relaxed">찜한 장소 목록을 확인하고 관리하시려면 로그인이 필요합니다.</p>
+          </div>
+          <div className="flex gap-4 pt-2">
+            <Link 
+              href="/" 
+              className="flex-1 py-3 border border-white/10 text-antique-ivory/80 rounded-xl text-xs font-semibold hover:bg-white/5 transition-all text-center"
+            >
+              홈으로
+            </Link>
+            <Link 
+              href="/login" 
+              className="flex-1 py-3 bg-antique-ivory text-black rounded-xl text-xs font-bold hover:bg-white transition-all text-center shadow-lg"
+            >
+              로그인하기
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background p-6 md:p-12">

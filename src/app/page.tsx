@@ -3,8 +3,35 @@
 import Link from "next/link";
 import { Search, Map as MapIcon, Film, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
+  const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>('');
+
+  useEffect(() => {
+    async function getSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+        setUserName(session.user.user_metadata?.name || '');
+      }
+    }
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setUserName(session?.user?.user_metadata?.name || '');
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -45,20 +72,40 @@ export default function Home() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem]" />
       </div>
 
-      {/* Header / My Bookmarks Link */}
+      {/* Header / My Bookmarks Link & Auth Info */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.8 }}
-        className="absolute top-8 right-8 z-10"
+        className="absolute top-8 right-8 z-10 flex items-center gap-3"
       >
-        <Link 
-          href="/bookmarks" 
-          className="flex items-center gap-2 px-5 py-2.5 border border-antique-ivory/20 rounded-full hover:bg-antique-ivory/10 transition-all hover:scale-105 active:scale-95 shadow-xl bg-black/35 backdrop-blur-md"
-        >
-          <Bookmark size={18} className="text-antique-ivory" fill="currentColor" fillOpacity={0.2} />
-          <span className="text-antique-ivory text-xs font-semibold tracking-wide">내 찜 목록</span>
-        </Link>
+        {user ? (
+          <>
+            <span className="text-xs text-antique-ivory/60 font-light hidden md:inline">
+              👤 <strong className="font-semibold text-antique-ivory">{userName || user.email}</strong> 님 안녕하세요
+            </span>
+            <Link 
+              href="/bookmarks" 
+              className="flex items-center gap-1.5 px-4 py-2 border border-antique-ivory/20 rounded-full hover:bg-antique-ivory/10 transition-all hover:scale-105 active:scale-95 text-xs text-antique-ivory bg-black/35 backdrop-blur-md font-medium"
+            >
+              <Bookmark size={14} className="text-antique-ivory" fill="currentColor" fillOpacity={0.2} />
+              <span>내 찜 목록</span>
+            </Link>
+            <button 
+              onClick={handleLogout}
+              className="px-4 py-2 border border-rose-500/20 text-rose-400 rounded-full hover:bg-rose-500/10 transition-all active:scale-95 text-xs bg-black/35 backdrop-blur-md font-medium cursor-pointer"
+            >
+              로그아웃
+            </button>
+          </>
+        ) : (
+          <Link 
+            href="/login" 
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-antique-ivory text-black rounded-full hover:bg-white transition-all hover:scale-105 active:scale-95 text-xs font-bold shadow-xl"
+          >
+            로그인 / 회원가입
+          </Link>
+        )}
       </motion.div>
 
       {/* Main Content Area */}
