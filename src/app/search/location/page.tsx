@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, ChevronLeft, MapPin } from 'lucide-react';
+import { Search, ChevronLeft, MapPin, Compass } from 'lucide-react';
 import Link from 'next/link';
 
 interface Spot {
@@ -89,10 +89,9 @@ export default function LocationSearchPage() {
               const uniqueMovies = Array.from(new Set(spot.scenes?.map(s => s.movies?.title))).filter(Boolean);
               
               return (
-                <Link
+                <div
                   key={spot.id}
-                  href={`/spot/${spot.id}`}
-                  className="group flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-antique-ivory/30 transition-all hover:bg-white/10"
+                  className="group flex flex-col md:flex-row md:items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-antique-ivory/30 transition-all hover:bg-white/10 gap-4"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-full ${spot.is_cafe ? 'bg-amber-400/10 text-amber-400' : 'bg-antique-ivory/10 text-antique-ivory'}`}>
@@ -107,13 +106,26 @@ export default function LocationSearchPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-antique-ivory/40">{spot.address}</p>
+                      <p className="text-sm text-antique-ivory/40">{spot.address}</p>
                     </div>
                   </div>
-                  <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-sm text-antique-ivory/60">상세 정보 보기 &rarr;</span>
+                  
+                  <div className="flex items-center gap-4 self-end md:self-center">
+                    <Link
+                      href={`/spot/${spot.id}`}
+                      className="text-xs text-antique-ivory/50 hover:text-antique-ivory hover:underline transition-colors"
+                    >
+                      상세 정보 보기 &rarr;
+                    </Link>
+                    <Link
+                      href={`/map?spot_id=${spot.id}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-antique-ivory hover:text-black rounded-xl text-xs font-semibold text-antique-ivory/80 transition-all"
+                    >
+                      <Compass size={12} />
+                      지도로 보기
+                    </Link>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

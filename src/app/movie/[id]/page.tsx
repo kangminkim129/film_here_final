@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ChevronLeft, MapPin } from 'lucide-react';
+import { ChevronLeft, MapPin, Compass } from 'lucide-react';
 import Link from 'next/link';
 
 import Image from 'next/image';
@@ -77,26 +77,36 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <main className="min-h-screen bg-background">
       {/* Hero Header */}
-      <div className="relative h-[40vh] md:h-[50vh] overflow-hidden">
+      <div className="relative h-[45vh] md:h-[55vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10" />
         {movie.poster_url && (
           <Image 
             src={movie.poster_url} 
-            className="object-cover blur-sm opacity-30" 
+            className="object-cover blur-sm opacity-20 scale-105" 
             alt="" 
             fill 
             unoptimized 
           />
         )}
-        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 z-20 space-y-4">
-          <Link href="/search/movie" className="w-fit flex items-center gap-1 text-antique-ivory/60 hover:text-antique-ivory transition-colors mb-4">
-            <ChevronLeft size={20} />
-            <span>목록으로</span>
+        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 z-20 space-y-4 max-w-4xl mx-auto">
+          <Link href="/search/movie" className="w-fit flex items-center gap-1 text-antique-ivory/60 hover:text-antique-ivory transition-colors mb-2 text-sm font-medium">
+            <ChevronLeft size={16} />
+            <span>작품 목록으로</span>
           </Link>
           <h1 className="text-4xl md:text-6xl font-bold text-antique-ivory tracking-tighter">
             {movie.title}
           </h1>
-          <p className="text-lg text-antique-ivory/40">{movie.release_year}년 개봉</p>
+          <p className="text-sm md:text-base text-antique-ivory/40">{movie.release_year}년 개봉</p>
+          
+          <div className="pt-2">
+            <Link
+              href={`/map?movie_id=${movie.id}`}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-antique-ivory text-black text-xs md:text-sm font-bold rounded-xl hover:bg-white transition-all shadow-2xl hover:scale-[1.02] active:scale-95 duration-200"
+            >
+              <Compass size={16} />
+              이 영화 촬영지 전체 지도로 보기
+            </Link>
+          </div>
         </div>
       </div>
 
