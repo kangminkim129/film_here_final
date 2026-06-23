@@ -1,0 +1,15 @@
+{
+  "name": "FilmHere — 촬영지 지도",
+  "short_name": "FilmHere",
+  "description": "영화·드라마 촬영지를 지도에서 찾고 직접 방문하는 K-콘텐츠 촬영지 가이드",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "lang": "ko",
+  "categories": ["travel", "entertainment", "navigation"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

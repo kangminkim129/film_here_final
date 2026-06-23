@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSpotsWithScenes } from '@/lib/data';
+import { koMatch } from '@/lib/korean';
 import { Search, ChevronLeft, MapPin, Compass } from 'lucide-react';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 interface Spot {
   id: string;
@@ -25,22 +28,8 @@ export default function LocationSearchPage() {
   useEffect(() => {
     async function fetchAllSpots() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('spots')
-        .select(`
-          id, 
-          name, 
-          address, 
-          is_cafe,
-          scenes (
-            movies (
-              title
-            )
-          )
-        `)
-        .order('name');
-      
-      if (!error) setSpots(data as unknown as Spot[] || []);
+      const data = await getSpotsWithScenes();
+      setSpots([...data].sort((a, b) => a.name.localeCompare(b.name)) as unknown as Spot[]);
       setLoading(false);
     }
     fetchAllSpots();
@@ -48,11 +37,7 @@ export default function LocationSearchPage() {
 
   const filteredSpots = spots.filter(spot => {
     const movieTitles = spot.scenes?.map(s => s.movies?.title).filter(Boolean).join(' ') || '';
-    return (
-      spot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (spot.address && spot.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      movieTitles.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return koMatch(spot.name, searchTerm) || koMatch(spot.address, searchTerm) || koMatch(movieTitles, searchTerm);
   });
 
   return (
@@ -79,8 +64,10 @@ export default function LocationSearchPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-pulse text-antique-ivory/50 text-xl font-light">Searching cinematic locations...</div>
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <ListRowSkeleton key={i} />
+            ))}
           </div>
         ) : (
           <div className="space-y-4">
@@ -132,9 +119,12 @@ export default function LocationSearchPage() {
         )}
 
         {!loading && filteredSpots.length === 0 && (
-          <div className="text-center py-20 text-antique-ivory/30 font-light text-lg">
-            검색 결과가 없습니다.
-          </div>
+          <EmptyState
+            icon={MapPin}
+            title="검색 결과가 없습니다."
+            description={searchTerm ? `"${searchTerm}"과(와) 일치하는 장소가 없어요.` : '등록된 촬영지가 없습니다.'}
+            action={{ label: '통합 검색으로 찾아보기 →', href: '/search' }}
+          />
         )}
       </div>
     </main>

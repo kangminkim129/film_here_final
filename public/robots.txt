@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://filming-spot-map-qr1u.vercel.app/sitemap.xml

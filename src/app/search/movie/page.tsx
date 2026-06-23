@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getMovies } from '@/lib/data';
+import { koMatch } from '@/lib/korean';
 import { Search, ChevronLeft, Film } from 'lucide-react';
 import Link from 'next/link';
-
 import Image from 'next/image';
+import EmptyState from '@/components/EmptyState';
+import { PosterSkeleton } from '@/components/Skeleton';
 
 interface Movie {
   id: string;
   title: string;
-  poster_url: string;
-  release_year: number;
+  poster_url?: string | null;
+  release_year?: number | null;
 }
 
 export default function MovieSearchPage() {
@@ -22,16 +24,13 @@ export default function MovieSearchPage() {
   useEffect(() => {
     async function fetchAllMovies() {
       setLoading(true);
-      const { data, error } = await supabase.from('movies').select('*').order('title');
-      if (!error) setMovies(data || []);
+      setMovies(await getMovies());
       setLoading(false);
     }
     fetchAllMovies();
   }, []);
 
-  const filteredMovies = movies.filter(movie => 
-    movie.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMovies = movies.filter(movie => koMatch(movie.title, searchTerm));
 
   return (
     <main className="min-h-screen bg-background p-6 md:p-12">
@@ -57,8 +56,10 @@ export default function MovieSearchPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-pulse text-antique-ivory/50 text-xl font-light">Loading cinematic works...</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PosterSkeleton key={i} />
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -94,9 +95,12 @@ export default function MovieSearchPage() {
         )}
 
         {!loading && filteredMovies.length === 0 && (
-          <div className="text-center py-20 text-antique-ivory/30 font-light text-lg">
-            검색 결과가 없습니다.
-          </div>
+          <EmptyState
+            icon={Film}
+            title="검색 결과가 없습니다."
+            description={searchTerm ? `"${searchTerm}"과(와) 일치하는 작품이 없어요.` : '등록된 작품이 없습니다.'}
+            action={{ label: '통합 검색으로 찾아보기 →', href: '/search' }}
+          />
         )}
       </div>
     </main>
