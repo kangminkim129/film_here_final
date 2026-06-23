@@ -4,16 +4,6 @@ import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
 import PWARegister from "@/components/PWARegister";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "FilmHere — 영화·드라마 촬영지 지도",
   description: "미디어 속 그 장소, 당신만의 명장면이 되는 곳. K-콘텐츠 촬영지를 지도에서 찾고 길찾기로 직접 방문하세요.",

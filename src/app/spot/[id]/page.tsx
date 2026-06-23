@@ -20,6 +20,8 @@ import type { Spot, SceneInfo } from '@/lib/types';
 
 export default function SpotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  
   const [spot, setSpot] = useState<Spot | null>(null);
   const [scenes, setScenes] = useState<SceneInfo[]>([]);
   const [nearby, setNearby] = useState<(Spot & { distanceKm: number })[]>([]);
